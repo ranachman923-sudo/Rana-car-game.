@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>رانا لگژری کار ریسنگ - الٹیمیٹ ایڈیشن</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #090d16;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            text-align: center;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #game-wrapper {
+            position: relative;
+            width: 360px;
+            height: 640px;
+            margin: 0 auto;
+            border: 4px solid #00e676;
+            background: #111827;
+            box-shadow: 0 0 30px rgba(0, 230, 118, 0.4);
+        }
+        canvas {
+            display: block;
+            background: #1f2937;
+        }
+        /* HUD UI */
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid #374151;
+        }
+        /* مینو اور گراج اسکرین */
+        .screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        .btn-main {
+            background: #00e676;
+            color: #111;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 4px #00a152;
+            width: 220px;
+        }
+        .btn-main:active { transform: translateY(3px); }
+        /* کنٹرولز پینل */
+        .controls-bar {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            right: 5px;
+            display: flex;
+            justify-content: space-between;
+            gap: 4px;
+        }
+        .ctrl-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 8px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 6px;
+            flex: 1;
+            cursor: pointer;
+            box-shadow: 0 3px #1d4ed8;
+        }
+        .ctrl-btn:active { transform: translateY(2px); }
+        .action-btn { background: #dc2626; box-shadow: 0 3px #991b1b; }
+        /* منی میپ */
+        #minimap {
+            position: absolute;
+            top: 55px;
+            right: 10px;
+            width: 35px;
+            height: 110px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #fff;
+            border-radius: 4px;
+        }
+        #player-dot {
+            position: absolute;
+            width: 7px;
+            height: 7px;
+            background: #00e676;
+            border-radius: 50%;
+            left: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-wrapper">
+        <!-- مین مینو -->
+        <div id="main-menu" class="screen-overlay">
+            <h1 style="color: #00e676; margin-bottom: 5px;">رانا الٹیمیٹ کار</h1>
+            <p style="color: #9ca3af; font-size: 14px; margin-bottom: 25px;">100 لیولز اور گراج سسٹم</p>
+            <button class="btn-main" onclick="startGame()">گیم شروع کریں</button>
+            <button class="btn-main" style="background: #3b82f6; box-shadow: 0 4px #1d4ed8;" onclick="openGarage()">گراج (کاریں)</button>
+            <button class="btn-main" style="background: #eab308; box-shadow: 0 4px #ca8a04;" onclick="openSettings()">سیٹنگز</button>
+        </div>
+
+        <!-- گراج اسکرین (نئی کاریں انلاک کرنے کے لیے) -->
+        <div id="garage-screen" class="screen-overlay" style="display: none;">
+            <h2 style="color: #3b82f6;">کار گراج</h2>
+            <p style="font-size: 14px; margin: 10px;">ہر 3 لیول کے بعد نئی کار انلاک ہوگی!</p>
+            <div id="car-list" style="margin: 15px 0; font-size: 15px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #475569;">
+                🚗 بنیادی کار (سلیکٹڈ)<br>
+                🚙 اسپورٹس کار (لیول 4 پر کھلے گی)<br>
+                🏎️ ریسر کار (لیول 7 پر کھلے گی)<br>
+                👑 لگژری کار (لیول 10 پر کھلے گی)
+            </div>
+            <button class="btn-main" onclick="closeGarage()">واپس</button>
+        </div>
+
+        <!-- سیٹنگز اسکرین -->
+        <div id="settings-screen" class="screen-overlay" style="display: none;">
+            <h2 style="color: #eab308;">سیٹنگز</h2>
+            <p>آواز: آن / آف</p>
+            <p>گرافکس: ہائی کوالٹی</p>
+            <button class="btn-main" onclick="closeSettings()">واپس</button>
+        </div>
+
+        <!-- گیمپلے HUD -->
+        <div class="hud" id="game-hud" style="display: none;">
+            <span id="ui-level">لیول: 1/100</span>
+            <span id="ui-score">سکے: 0</span>
+            <span id="ui-gear">گیئر: D</span>
+        </div>
+
+        <div id="minimap" id="minimap-box" style="display: none;">
+            <div id="player-dot"></div>
+        </div>
+
+        <canvas id="gameCanvas" width="360" height="640"></canvas>
+
+        <!-- گیم کنٹرولز -->
+        <div class="controls-bar" id="game-controls" style="display: none;">
+            <button class="ctrl-btn" onclick="moveLeft()">◀ بائیں</button>
+            <button class="ctrl-btn action-btn" onclick="toggleTorch()">🔦 ٹارچ</button>
+            <button class="ctrl-btn action-btn" onclick="honkHorn()">📢 ہارن</button>
+            <button class="ctrl-btn" onclick="moveRight()">دائیں ▶</button>
+        </div>
+        <div style="position: absolute; bottom: 45px; left: 5px; right: 5px; display: flex; gap: 4px;" id="game-controls-2" style="display: none;">
+            <button class="ctrl-btn" style="background: #16a34a;" onclick="accelerate()">⚡ ریس</button>
+            <button class="ctrl-btn" style="background: #ca8a04;" onclick="changeGear()">⚙ گیئر</button>
+            <button class="ctrl-btn" style="background: #dc2626;" onclick="brake()">🛑 بریک</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let gameState = "MENU"; // MENU, PLAYING, GARAGE, SETTINGS
+        let level = 1;
+        let score = 0;
+        let gear = "D";
+        let torchOn = false;
+        let levelProgress = 0;
+
+        let car = { x: 160, y: 500, width: 38, height: 72, speed: 4, color: "#00e676" };
+        let obstacles = [];
+        let coins = [];
+        let roadLinesY = 0;
+
+        function openGarage() { document.getElementById("garage-screen").style.display = "flex"; }
+        function closeGarage() { document.getElementById("garage-screen").style.display = "none"; }
+        function openSettings() { document.getElementById("settings-screen").style.display = "flex"; }
+        function closeSettings() { document.getElementById("settings-screen").style.display = "none"; }
+
+        function startGame() {
+            document.getElementById("main-menu").style.display = "none";
+            document.getElementById("game-hud").style.display = "flex";
+            document.getElementById("minimap").style.display = "block";
+            document.getElementById("game-controls").style.display = "flex";
+            document.getElementById("game-controls-2").style.display = "flex";
+            gameState = "PLAYING";
+        }
+
+        function moveLeft() { if (car.x > 45) car.x -= 35; }
+        function moveRight() { if (car.x < canvas.width - 75) car.x += 35; }
+        function accelerate() { car.speed = Math.min(car.speed + 2, 11); }
+        function brake() { car.speed = Math.max(car.speed - 3, 2); }
+        function changeGear() { gear = (gear === "D") ? "R" : "D"; }
+        function toggleTorch() { torchOn = !torchOn; }
+        function honkHorn() {
+            let snd = new Audio('https://www.myinstants.com/media/sounds/car-horn.mp3');
+            snd.play().catch(e => {});
+        }
+
+        function spawnElements() {
+            let lanes = [45, 115, 185, 255];
+            let laneX = lanes[Math.floor(Math.random() * lanes.length)];
+            if (Math.random() < 0.65) {
+                obstacles.push({ x: laneX, y: -90, width: 38, height: 70, speed: 3 + (level * 0.15) });
+            } else {
+                coins.push({ x: laneX + 9, y: -90, width: 20, height: 20 });
+            }
+        }
+
+        function update() {
+            if (gameState !== "PLAYING") return;
+
+            roadLinesY += car.speed;
+            if (roadLinesY > 50) roadLinesY = 0;
+
+            levelProgress += 0.4;
+            let dotPos = Math.min(95, (levelProgress / 100) * 95);
+            document.getElementById("player-dot").style.top = (95 - dotPos) + "px";
+
+            // لیول اپ گریڈ اور کار انلاک چیک
+            if (levelProgress >= 100) {
+                if (level < 100) {
+                    level++;
+                    levelProgress = 0;
+                    alert("مبارک ہو! آپ لیول " + level + " پر پہنچ گئے!");
+                    // کار کلر یا ماڈل اپڈیٹ کرنا ہر 3 لیول بعد
+                    if (level === 4) car.color = "#3b82f6"; // اسپورٹس کار رنگ
+                    if (level === 7) car.color = "#eab308"; // ریسر کار رنگ
+                    if (level === 10) car.color = "#ec4899"; // لگژری کار رنگ
+                } else {
+                    alert("شاندار! آپ نے تمام 100 لیول مکمل کر لیے!");
+                    location.reload();
+                }
+            }
+
+            // رکاوٹیں
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].y += car.speed + obstacles[i].speed;
+                if (
+                    car.x < obstacles[i].x + obstacles[i].width &&
+                    car.x + car.width > obstacles[i].x &&
+                    car.y < obstacles[i].y + obstacles[i].height &&
+                    car.y + car.height > obstacles[i].y
+                ) {
+                    alert("گیم اوور! آپ کا کل اسکور: " + score);
+                    location.reload();
+                }
+                if (obstacles[i].y > canvas.height) obstacles.splice(i, 1);
+            }
+
+            // سکے
+            for (let i = coins.length - 1; i >= 0; i--) {
+                coins[i].y += car.speed;
+                if (
+                    car.x < coins[i].x + coins[i].width &&
+                    car.x + car.width > coins[i].x &&
+                    car.y < coins[i].y + coins[i].height &&
+                    car.y + car.height > coins[i].y
+                ) {
+                    score += 10;
+                    document.getElementById("ui-score").innerText = "سکے: " + score;
+                    coins.splice(i, 1);
+                } else if (coins[i].y > canvas.height) {
+                    coins.splice(i, 1);
+                }
+            }
+
+            if (Math.random() < 0.035) spawnElements();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (gameState !== "PLAYING") return;
+
+            // روڈ
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(25, 0, canvas.width - 50, canvas.height);
+
+            // باؤنڈریز
+            ctx.fillStyle = "#00e676";
+            ctx.fillRect(20, 0, 5, canvas.height);
+            ctx.fillRect(canvas.width - 25, 0, 5, canvas.height);
+
+            // درمیانی لائنیں
+            ctx.fillStyle = "#facc15";
+            for (let i = -50; i < canvas.height; i += 50) {
+                ctx.fillRect(178, i + roadLinesY, 4, 25);
+            }
+
+            // سکے
+            for (let c of coins) {
+                ctx.fillStyle = "#f59e0b";
+                ctx.beginPath();
+                ctx.arc(c.x + 10, c.y + 10, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 12px Arial";
+                ctx.fillText("$", c.x + 6, c.y + 14);
+            }
+
+            // رکاوٹ کاریں
+            for (let o of obstacles) {
+                ctx.fillStyle = "#ef4444";
+                ctx.fillRect(o.x, o.y, o.width, o.height);
+                ctx.fillStyle = "#000";
+                ctx.fillRect(o.x + 4, o.y + 10, 30, 12);
+            }
+
+            // پلیئر کار
+            ctx.fillStyle = car.color;
+            ctx.fillRect(car.x, car.y, car.width, car.height);
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(car.x + 4, car.y + 12, 30, 14);
+
+            // ٹارچ کا اثر
+            if (torchOn) {
+                let grad = ctx.createRadialGradient(car.x + 19, car.y, 10, car.x + 19, car.y, 130);
+                grad.addColorStop(0, "rgba(255, 255, 0, 0.45)");
+                grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            document.getElementById("ui-level").innerText = "لیول: " + level + "/100";
+            document.getElementById("ui-gear").innerText = "گیئر: " + gear;
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>
