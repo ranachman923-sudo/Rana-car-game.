@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>رانا ہل کلائمب ریسنگ</title>
+    <title>رانا ہل کلائمب ریسنگ - اصل جیسی گیم</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: #1a1a2e;
+            background: #111;
             color: #fff;
             font-family: Arial, sans-serif;
             text-align: center;
@@ -21,12 +21,13 @@
             height: 600px;
             margin: 0 auto;
             border: 4px solid #f39c12;
-            background: #87CEEB; /* آسمان کا رنگ */
-            box-shadow: 0 0 20px rgba(243, 156, 18, 0.5);
+            background: #70c5ce; /* ہل کلائمب کا اصل آسمانی رنگ */
+            box-shadow: 0 0 20px rgba(243, 156, 18, 0.6);
         }
         canvas {
             display: block;
         }
+        /* ہل کلائمب سٹائل HUD (اوپر سکور اور سکے) */
         .hud {
             position: absolute;
             top: 10px;
@@ -34,77 +35,83 @@
             right: 10px;
             display: flex;
             justify-content: space-between;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 8px;
-            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #f1c40f;
+        }
+        .coin-box {
+            color: #f1c40f;
         }
         /* پیٹرول بار */
-        #fuel-bar-container {
+        #fuel-container {
             position: absolute;
-            top: 45px;
-            left: 10px;
-            right: 10px;
-            height: 10px;
-            background: #444;
-            border-radius: 5px;
-            border: 1px solid #fff;
+            top: 55px;
+            left: 15px;
+            right: 15px;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            border: 2px solid #fff;
+            overflow: hidden;
         }
-        #fuel-bar {
+        #fuel-fill {
             width: 100%;
             height: 100%;
             background: #2ecc71;
-            border-radius: 4px;
         }
-        /* ڈرائیونگ کنٹرولز (ریس اور بریک) */
+        /* کنٹرول بٹنز (ریس اور بریک) */
         .controls {
             position: absolute;
-            bottom: 10px;
+            bottom: 15px;
             left: 10px;
             right: 10px;
             display: flex;
             justify-content: space-between;
         }
         .btn {
-            background: #e74c3c;
+            background: #c0392b;
             color: white;
             border: none;
-            padding: 20px 40px;
-            font-size: 18px;
+            padding: 22px 35px;
+            font-size: 20px;
             font-weight: bold;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
-            box-shadow: 0 5px #c0392b;
+            box-shadow: 0 6px #962d22;
             flex: 1;
-            margin: 0 5px;
+            margin: 0 8px;
         }
         .btn-gas {
-            background: #2ecc71;
-            box-shadow: 0 5px #27ae60;
+            background: #27ae60;
+            box-shadow: 0 6px #1e8449;
         }
         .btn:active {
             transform: translateY(4px);
-            box-shadow: 0 1px #27ae60;
+            box-shadow: 0 2px #1e8449;
         }
     </style>
 </head>
 <body>
 
     <div id="game-container">
+        <!-- اوپر والا پینل بالکل ہل کلائمب جیسا -->
         <div class="hud">
-            <span id="score-text">سکے: 0</span>
-            <span id="distance-text">فاصلہ: 0m</span>
+            <span>فاصلہ: <span id="dist">0</span>m</span>
+            <span class="coin-box">🪙 <span id="coins">0</span></span>
         </div>
-        <div id="fuel-bar-container">
-            <div id="fuel-bar"></div>
+        <div id="fuel-container">
+            <div id="fuel-fill"></div>
         </div>
 
         <canvas id="gameCanvas" width="360" height="600"></canvas>
 
+        <!-- نیچے کنٹرولز -->
         <div class="controls">
-            <button class="btn" id="brakeBtn">اُلٹا / بریک ◀</button>
-            <button class="btn btn-gas" id="gasBtn">ریس (Gas) ▶</button>
+            <button class="btn" id="brakeBtn">◀ بریک</button>
+            <button class="btn btn-gas" id="gasBtn">ریس ▶</button>
         </div>
     </div>
 
@@ -112,86 +119,108 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        let score = 0;
+        let coinsCount = 0;
         let distance = 0;
         let fuel = 100;
         let cameraX = 0;
 
-        // گاڑی کی پوزیشن اور فزکس
+        // اصلی کار کی فزکس
         let car = {
-            x: 50,
+            x: 60,
             y: 400,
             vx: 0,
             vy: 0,
             angle: 0,
-            width: 50,
-            height: 25,
-            power: 0.2,
-            gravity: 0.3
+            width: 60,
+            height: 28,
+            power: 0.25,
+            gravity: 0.35
         };
 
-        let isGasPressed = false;
-        let isBrakePressed = false;
+        let coinList = [];
+        let isGas = false;
+        let isBrake = false;
 
-        // بٹن کے کنٹرولز
-        document.getElementById("gasBtn").addEventListener("touchstart", () => { isGasPressed = true; });
-        document.getElementById("gasBtn").addEventListener("touchend", () => { isGasPressed = false; });
-        document.getElementById("gasBtn").addEventListener("mousedown", () => { isGasPressed = true; });
-        document.getElementById("gasBtn").addEventListener("mouseup", () => { isGasPressed = false; });
+        // ٹچ اور کلک کے کنٹرولز
+        const gasBtn = document.getElementById("gasBtn");
+        const brakeBtn = document.getElementById("brakeBtn");
 
-        document.getElementById("brakeBtn").addEventListener("touchstart", () => { isBrakePressed = true; });
-        document.getElementById("brakeBtn").addEventListener("touchend", () => { isBrakePressed = false; });
-        document.getElementById("brakeBtn").addEventListener("mousedown", () => { isBrakePressed = true; });
-        document.getElementById("brakeBtn").addEventListener("mouseup", () => { isBrakePressed = false; });
+        gasBtn.addEventListener("touchstart", (e) => { e.preventDefault(); isGas = true; });
+        gasBtn.addEventListener("touchend", () => { isGas = false; });
+        gasBtn.addEventListener("mousedown", () => { isGas = true; });
+        gasBtn.addEventListener("mouseup", () => { isGas = false; });
 
-        // پہاڑی راستے کا فنکشن (Terrain)
-        function getTerrainHeight(x) {
-            // سائن ویو کے ذریعے اونچے نیچے پہاڑ بنانا
-            return 450 + Math.sin(x * 0.005) * 80 + Math.sin(x * 0.02) * 30;
+        brakeBtn.addEventListener("touchstart", (e) => { e.preventDefault(); isBrake = true; });
+        brakeBtn.addEventListener("touchend", () => { isBrake = false; });
+        brakeBtn.addEventListener("mousedown", () => { isBrake = true; });
+        brakeBtn.addEventListener("mouseup", () => { isBrake = false; });
+
+        // پہاڑی راستہ (Terrain)
+        function getGroundY(x) {
+            return 460 + Math.sin(x * 0.006) * 90 + Math.sin(x * 0.02) * 35;
         }
 
+        // سکے بنانا
+        function spawnCoins() {
+            for (let i = 200; i < 5000; i += 180) {
+                coinList.push({
+                    x: i,
+                    y: getGroundY(i) - 50,
+                    collected: false
+                });
+            }
+        }
+        spawnCoins();
+
         function update() {
-            // پیٹرول کم ہونا
-            if (isGasPressed && fuel > 0) {
+            if (isGas && fuel > 0) {
                 car.vx += car.power;
-                fuel -= 0.05;
-                document.getElementById("fuel-bar").style.width = fuel + "%";
+                fuel -= 0.03;
+                document.getElementById("fuel-fill").style.width = fuel + "%";
+            }
+            if (isBrake) {
+                car.vx -= car.power * 0.9;
             }
 
-            if (isBrakePressed) {
-                car.vx -= car.power * 0.8;
-            }
-
-            // کششِ ثقل (Gravity) اور فزکس
             car.vy += car.gravity;
-            car.vx *= 0.98; // رگڑ (Friction)
+            car.vx *= 0.98; // رگڑ
 
             car.x += car.vx;
             car.y += car.vy;
 
-            // زمین کے ساتھ ٹکر اور پہاڑ پر چلنا
-            let groundY = getTerrainHeight(car.x);
+            // زمین کے ساتھ ٹکر
+            let groundY = getGroundY(car.x);
             if (car.y > groundY - car.height) {
                 car.y = groundY - car.height;
                 car.vy = 0;
 
-                // پہاڑ کے ڈھلوان کے حساب سے گاڑی کا زاویہ (Angle) بدلنا
-                let nextGroundY = getTerrainHeight(car.x + 10);
-                car.angle = Math.atan2(nextGroundY - groundY, 10);
+                let nextY = getGroundY(car.x + 15);
+                car.angle = Math.atan2(nextY - groundY, 15);
             } else {
-                // ہوا میں گاڑی کا زاویہ گھمانا اگر ریس یا بریک دبائی جائے
-                if (isGasPressed) car.angle += 0.03;
-                if (isBrakePressed) car.angle -= 0.03;
+                if (isGas) car.angle += 0.04;
+                if (isBrake) car.angle -= 0.04;
             }
 
-            // کیمرہ گاڑی کے ساتھ آگے چلنا
-            cameraX = car.x - 80;
+            cameraX = car.x - 100;
             distance = Math.floor(car.x / 10);
-            document.getElementById("distance-text").innerText = "فاصلہ: " + distance + "m";
+            document.getElementById("dist").innerText = distance;
 
-            // پیٹرول ختم یا الٹنے پر گیم اوور
-            if (fuel <= 0 || (car.angle > 1.5 || car.angle < -1.5)) {
-                alert("گیم اوور! آپ کا فاصلہ: " + distance + "m");
+            // سکے پکڑے جانا (Collision)
+            for (let c of coinList) {
+                if (!c.collected) {
+                    let distX = car.x - c.x;
+                    let distY = car.y - c.y;
+                    if (Math.sqrt(distX * distX + distY * distY) < 35) {
+                        c.collected = true;
+                        coinsCount += 1;
+                        document.getElementById("coins").innerText = coinsCount;
+                    }
+                }
+            }
+
+            // الٹنے یا پیٹرول ختم ہونے پر گیم اوور
+            if (fuel <= 0 || car.angle > 1.5 || car.angle < -1.5) {
+                alert("گیم اوور! آپ کے کل سکے: " + coinsCount);
                 location.reload();
             }
         }
@@ -202,46 +231,75 @@
             ctx.save();
             ctx.translate(-cameraX, 0);
 
-            // پہاڑ/زمین ڈرا کرنا
-            ctx.fillStyle = "#27ae60"; // زمین کا رنگ
+            // زمین / پہاڑ ڈرا کرنا
+            ctx.fillStyle = "#8B4513"; // بھورا پہاڑ
             ctx.beginPath();
             ctx.moveTo(cameraX, canvas.height);
-            for (let x = cameraX; x < cameraX + canvas.width + 50; x += 10) {
-                ctx.lineTo(x, getTerrainHeight(x));
+            for (let x = cameraX; x < cameraX + canvas.width + 100; x += 10) {
+                ctx.lineTo(x, getGroundY(x));
             }
-            ctx.lineTo(cameraX + canvas.width + 50, canvas.height);
+            ctx.lineTo(cameraX + canvas.width + 100, canvas.height);
             ctx.fill();
 
-            // گاڑی ڈرا کرنا
+            // گھاس کی ہری تہہ
+            ctx.strokeStyle = "#2ecc71";
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            for (let x = cameraX; x < cameraX + canvas.width + 100; x += 10) {
+                if (x === cameraX) ctx.moveTo(x, getGroundY(x));
+                else ctx.lineTo(x, getGroundY(x));
+            }
+            ctx.stroke();
+
+            // سکے ڈرا کرنا
+            for (let c of coinList) {
+                if (!c.collected) {
+                    ctx.fillStyle = "#f1c40f";
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = "#d4ac0d";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+
+            // اصلی ہل کلائمب والی سرخ کار ڈرا کرنا
             ctx.save();
             ctx.translate(car.x, car.y);
             ctx.rotate(car.angle);
 
-            // گاڑی کی باڈی
+            // کار کی باڈی (سرخ رنگ)
             ctx.fillStyle = "#e74c3c";
-            ctx.fillRect(-car.width/2, -car.height, car.width, car.height);
-            // چھت
-            ctx.fillStyle = "#c0392b";
-            ctx.fillRect(-10, -car.height - 15, 25, 15);
+            ctx.fillRect(-car.width/2, -car.height - 5, car.width, car.height);
+            // چھت اور شیشہ
+            ctx.fillStyle = "#3498db";
+            ctx.fillRect(-12, -car.height - 18, 26, 13);
 
-            // ٹائر
+            // بڑے اور مضبوط ٹائر
             ctx.fillStyle = "#2c3e50";
             ctx.beginPath();
-            ctx.arc(-15, 0, 8, 0, Math.PI * 2);
-            ctx.arc(15, 0, 8, 0, Math.PI * 2);
+            ctx.arc(-18, 0, 11, 0, Math.PI * 2);
+            ctx.arc(18, 0, 11, 0, Math.PI * 2);
+            ctx.fill();
+            // ٹائر کے اندر کا رم
+            ctx.fillStyle = "#bdc3c7";
+            ctx.beginPath();
+            ctx.arc(-18, 0, 4, 0, Math.PI * 2);
+            ctx.arc(18, 0, 4, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();
             ctx.restore();
         }
 
-        function gameLoop() {
+        function loop() {
             update();
             draw();
-            requestAnimationFrame(gameLoop);
+            requestAnimationFrame(loop);
         }
 
-        gameLoop();
+        loop();
     </script>
 </body>
 </html>
