@@ -3,68 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Video Downloader</title>
+    <title>All-in-One Video Downloader</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background: #0f172a; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .card { background: #1e293b; padding: 30px; border-radius: 15px; width: 100%; max-width: 480px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
-        h2 { color: #38bdf8; margin-bottom: 10px; }
-        p { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
-        input { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 15px; margin-bottom: 12px; outline: none; }
-        button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: #0284c7; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .dl-btn { display: inline-block; width: 100%; padding: 14px; background: #22c55e; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 15px; }
-        .loader { display: none; margin: 15px auto; border: 3px solid #334155; border-top: 3px solid #38bdf8; border-radius: 50%; width: 30px; height: 30px; animation: spin 0.8s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { margin: 0; padding: 0; font-family: sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .container { width: 95%; max-width: 600px; background: #1e293b; padding: 20px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        h1 { color: #38bdf8; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>TikTok Video Downloader</h2>
-    <p>ٹک ٹاک کا کوئی بھی لنک پیسٹ کریں</p>
+    <div class="header">
+        <h1>All-in-One Downloader</h1>
+        <p>ٹک ٹاک، انسٹاگرام، فیس بک سب یہاں سے ڈاؤنلوڈ کریں</p>
+    </div>
 
-    <input type="text" id="urlInput" placeholder="https://vt.tiktok.com/...">
-    <button onclick="processTikTok()">ڈاؤنلوڈ کریں</button>
-
-    <div class="loader" id="loader"></div>
-    <div id="result"></div>
-</div>
-
-<script>
-async function processTikTok() {
-    let inputUrl = document.getElementById('urlInput').value.trim();
-    const loader = document.getElementById('loader');
-    const result = document.getElementById('result');
-
-    if (!inputUrl) { alert('براہ کرم لنک درج کریں!'); return; }
-
-    result.innerHTML = '';
-    loader.style.display = 'block';
-
-    // CORS Proxy Bypass
-    const proxy = "https://api.allorigins.win/raw?url=";
-    const apiUrl = `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(inputUrl)}`;
-
-    try {
-        let response = await fetch(proxy + encodeURIComponent(apiUrl));
-        let data = await response.json();
-
-        loader.style.display = 'none';
-
-        if (data && data.video && data.video.noWatermark) {
-            result.innerHTML = `
-                <p style="color: #4ade80; margin-bottom: 5px;">ویڈیو تیار ہے!</p>
-                <a href="${data.video.noWatermark}" class="dl-btn" target="_blank" download>Download Clean HD Video</a>
-            `;
-        } else {
-            result.innerHTML = '<p style="color: #f87171;">معذرت، ویڈیو نہیں مل سکی۔ لنک چیک کریں۔</p>';
-        }
-    } catch (error) {
-        loader.style.display = 'none';
-        result.innerHTML = '<p style="color: #f87171;">پراکسی کنکشن میں مسئلہ ہے۔ دوبارہ کوشش کریں۔</p>';
-    }
-}
-</script>
+    <div class="container">
+        <!-- یہ وہ پروفیشنل ویجیٹ ہے جو کبھی فیل نہیں ہوگا -->
+        <iframe 
+            src="https://snaptik.app/en" 
+            style="width: 100%; height: 600px; border: none; border-radius: 10px;" 
+            allowfullscreen>
+        </iframe>
+    </div>
 
 </body>
 </html>
