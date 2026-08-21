@@ -1,305 +1,167 @@
 <!DOCTYPE html>
-<html lang="ur" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>رانا ہل کلائمب ریسنگ - اصل جیسی گیم</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Jungle Endless Runner</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #111;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            overflow: hidden;
-            touch-action: none;
-        }
-        #game-container {
-            position: relative;
-            width: 360px;
-            height: 600px;
-            margin: 0 auto;
-            border: 4px solid #f39c12;
-            background: #70c5ce; /* ہل کلائمب کا اصل آسمانی رنگ */
-            box-shadow: 0 0 20px rgba(243, 156, 18, 0.6);
-        }
-        canvas {
-            display: block;
-        }
-        /* ہل کلائمب سٹائل HUD (اوپر سکور اور سکے) */
-        .hud {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 16px;
-            font-weight: bold;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 2px solid #f1c40f;
-        }
-        .coin-box {
-            color: #f1c40f;
-        }
-        /* پیٹرول بار */
-        #fuel-container {
-            position: absolute;
-            top: 55px;
-            left: 15px;
-            right: 15px;
-            height: 12px;
-            background: #333;
-            border-radius: 6px;
-            border: 2px solid #fff;
-            overflow: hidden;
-        }
-        #fuel-fill {
-            width: 100%;
-            height: 100%;
-            background: #2ecc71;
-        }
-        /* کنٹرول بٹنز (ریس اور بریک) */
-        .controls {
-            position: absolute;
-            bottom: 15px;
-            left: 10px;
-            right: 10px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .btn {
-            background: #c0392b;
-            color: white;
-            border: none;
-            padding: 22px 35px;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            box-shadow: 0 6px #962d22;
-            flex: 1;
-            margin: 0 8px;
-        }
-        .btn-gas {
-            background: #27ae60;
-            box-shadow: 0 6px #1e8449;
-        }
-        .btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px #1e8449;
-        }
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px #000; }
+        #game-over { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.8); padding: 30px; text-align: center; border-radius: 10px; }
+        #restart-btn { padding: 10px 20px; font-size: 18px; margin-top: 15px; cursor: pointer; background: #ff9800; border: none; color: white; border-radius: 5px; }
     </style>
 </head>
 <body>
-
-    <div id="game-container">
-        <!-- اوپر والا پینل بالکل ہل کلائمب جیسا -->
-        <div class="hud">
-            <span>فاصلہ: <span id="dist">0</span>m</span>
-            <span class="coin-box">🪙 <span id="coins">0</span></span>
-        </div>
-        <div id="fuel-container">
-            <div id="fuel-fill"></div>
-        </div>
-
-        <canvas id="gameCanvas" width="360" height="600"></canvas>
-
-        <!-- نیچے کنٹرولز -->
-        <div class="controls">
-            <button class="btn" id="brakeBtn">◀ بریک</button>
-            <button class="btn btn-gas" id="gasBtn">ریس ▶</button>
-        </div>
+    <div id="ui">Score: <span id="score">0</span></div>
+    <div id="game-over">
+        <h1>Game Over!</h1>
+        <p>Your Score: <span id="final-score">0</span></p>
+        <button id="restart-btn" onclick="restartGame()">Play Again</button>
     </div>
 
+    <!-- Three.js Library for 3D Graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+        let scene, camera, renderer, player;
+        let score = 0, speed = 0.4, isGameOver = false;
+        let currentLane = 0; // -1: Left, 0: Middle, 1: Right
+        const laneWidth = 3;
+        let obstacles = [], groundTiles = [];
 
-        let coinsCount = 0;
-        let distance = 0;
-        let fuel = 100;
-        let cameraX = 0;
+        function init() {
+            // Scene & Camera
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x228b22); // Forest Green Background
+            scene.fog = new THREE.Fog(0x228b22, 20, 100);
 
-        // اصلی کار کی فزکس
-        let car = {
-            x: 60,
-            y: 400,
-            vx: 0,
-            vy: 0,
-            angle: 0,
-            width: 60,
-            height: 28,
-            power: 0.25,
-            gravity: 0.35
-        };
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4, -8);
+            camera.lookAt(0, 1, 10);
 
-        let coinList = [];
-        let isGas = false;
-        let isBrake = false;
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-        // ٹچ اور کلک کے کنٹرولز
-        const gasBtn = document.getElementById("gasBtn");
-        const brakeBtn = document.getElementById("brakeBtn");
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
 
-        gasBtn.addEventListener("touchstart", (e) => { e.preventDefault(); isGas = true; });
-        gasBtn.addEventListener("touchend", () => { isGas = false; });
-        gasBtn.addEventListener("mousedown", () => { isGas = true; });
-        gasBtn.addEventListener("mouseup", () => { isGas = false; });
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(0, 20, -10);
+            scene.add(dirLight);
 
-        brakeBtn.addEventListener("touchstart", (e) => { e.preventDefault(); isBrake = true; });
-        brakeBtn.addEventListener("touchend", () => { isBrake = false; });
-        brakeBtn.addEventListener("mousedown", () => { isBrake = true; });
-        brakeBtn.addEventListener("mouseup", () => { isBrake = false; });
+            // Player (Hero Mesh)
+            const geometry = new THREE.BoxGeometry(1, 2, 1);
+            const material = new THREE.MeshLambertMaterial({ color: 0xffd700 }); // Gold Color
+            player = new THREE.Mesh(geometry, material);
+            player.position.set(0, 1, 0);
+            scene.add(player);
 
-        // پہاڑی راستہ (Terrain)
-        function getGroundY(x) {
-            return 460 + Math.sin(x * 0.006) * 90 + Math.sin(x * 0.02) * 35;
+            // Generate Initial Path
+            for (let i = 0; i < 10; i++) {
+                createGroundTile(i * 20);
+            }
+
+            // Controls
+            document.addEventListener('keydown', handleInput);
+
+            animate();
         }
 
-        // سکے بنانا
-        function spawnCoins() {
-            for (let i = 200; i < 5000; i += 180) {
-                coinList.push({
-                    x: i,
-                    y: getGroundY(i) - 50,
-                    collected: false
-                });
+        function createGroundTile(zPos) {
+            const geo = new THREE.BoxGeometry(10, 0.2, 20);
+            const mat = new THREE.MeshLambertMaterial({ color: 0x8b4513 }); // Mud/Jungle Path
+            const tile = new THREE.Mesh(geo, mat);
+            tile.position.set(0, 0, zPos);
+            scene.add(tile);
+            groundTiles.push(tile);
+
+            // Spawn Obstacle
+            if (zPos > 20 && Math.random() > 0.4) {
+                createObstacle(zPos);
             }
         }
-        spawnCoins();
 
-        function update() {
-            if (isGas && fuel > 0) {
-                car.vx += car.power;
-                fuel -= 0.03;
-                document.getElementById("fuel-fill").style.width = fuel + "%";
+        function createObstacle(zPos) {
+            const lanes = [-laneWidth, 0, laneWidth];
+            const randomLane = lanes[Math.floor(Math.random() * lanes.length)];
+            
+            const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+            const mat = new THREE.MeshLambertMaterial({ color: 0xff0000 }); // Red Obstacle
+            const obstacle = new THREE.Mesh(geo, mat);
+            obstacle.position.set(randomLane, 0.75, zPos);
+            scene.add(obstacle);
+            obstacles.push(obstacle);
+        }
+
+        function handleInput(e) {
+            if (isGameOver) return;
+            if ((e.key === 'ArrowLeft' || e.key === 'a') && currentLane > -1) {
+                currentLane--;
+            } else if ((e.key === 'ArrowRight' || e.key === 'd') && currentLane < 1) {
+                currentLane++;
             }
-            if (isBrake) {
-                car.vx -= car.power * 0.9;
-            }
+        }
 
-            car.vy += car.gravity;
-            car.vx *= 0.98; // رگڑ
+        function animate() {
+            if (isGameOver) return;
+            requestAnimationFrame(animate);
 
-            car.x += car.vx;
-            car.y += car.vy;
+            // Move Player Smoothly to Target Lane
+            const targetX = currentLane * laneWidth;
+            player.position.x += (targetX - player.position.x) * 0.2;
 
-            // زمین کے ساتھ ٹکر
-            let groundY = getGroundY(car.x);
-            if (car.y > groundY - car.height) {
-                car.y = groundY - car.height;
-                car.vy = 0;
+            // Move Environment towards Camera (Endless Loop)
+            groundTiles.forEach(tile => {
+                tile.position.z -= speed;
+                if (tile.position.z < -20) {
+                    tile.position.z += 200;
+                }
+            });
 
-                let nextY = getGroundY(car.x + 15);
-                car.angle = Math.atan2(nextY - groundY, 15);
-            } else {
-                if (isGas) car.angle += 0.04;
-                if (isBrake) car.angle -= 0.04;
-            }
+            // Move Obstacles & Check Collisions
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.position.z -= speed;
 
-            cameraX = car.x - 100;
-            distance = Math.floor(car.x / 10);
-            document.getElementById("dist").innerText = distance;
+                // Collision Detection
+                const pBox = new THREE.Box3().setFromObject(player);
+                const oBox = new THREE.Box3().setFromObject(obs);
 
-            // سکے پکڑے جانا (Collision)
-            for (let c of coinList) {
-                if (!c.collected) {
-                    let distX = car.x - c.x;
-                    let distY = car.y - c.y;
-                    if (Math.sqrt(distX * distX + distY * distY) < 35) {
-                        c.collected = true;
-                        coinsCount += 1;
-                        document.getElementById("coins").innerText = coinsCount;
-                    }
+                if (pBox.intersectsBox(oBox)) {
+                    gameOver();
+                }
+
+                // Remove Passed Obstacles
+                if (obs.position.z < -10) {
+                    scene.remove(obs);
+                    obstacles.splice(i, 1);
+                    score += 10;
+                    document.getElementById('score').innerText = score;
                 }
             }
 
-            // الٹنے یا پیٹرول ختم ہونے پر گیم اوور
-            if (fuel <= 0 || car.angle > 1.5 || car.angle < -1.5) {
-                alert("گیم اوور! آپ کے کل سکے: " + coinsCount);
-                location.reload();
+            // Spawn New Obstacles Continuously
+            if (obstacles.length < 5) {
+                createObstacle(player.position.z + 150);
             }
+
+            renderer.render(scene, camera);
         }
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            ctx.save();
-            ctx.translate(-cameraX, 0);
-
-            // زمین / پہاڑ ڈرا کرنا
-            ctx.fillStyle = "#8B4513"; // بھورا پہاڑ
-            ctx.beginPath();
-            ctx.moveTo(cameraX, canvas.height);
-            for (let x = cameraX; x < cameraX + canvas.width + 100; x += 10) {
-                ctx.lineTo(x, getGroundY(x));
-            }
-            ctx.lineTo(cameraX + canvas.width + 100, canvas.height);
-            ctx.fill();
-
-            // گھاس کی ہری تہہ
-            ctx.strokeStyle = "#2ecc71";
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            for (let x = cameraX; x < cameraX + canvas.width + 100; x += 10) {
-                if (x === cameraX) ctx.moveTo(x, getGroundY(x));
-                else ctx.lineTo(x, getGroundY(x));
-            }
-            ctx.stroke();
-
-            // سکے ڈرا کرنا
-            for (let c of coinList) {
-                if (!c.collected) {
-                    ctx.fillStyle = "#f1c40f";
-                    ctx.beginPath();
-                    ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = "#d4ac0d";
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
-            }
-
-            // اصلی ہل کلائمب والی سرخ کار ڈرا کرنا
-            ctx.save();
-            ctx.translate(car.x, car.y);
-            ctx.rotate(car.angle);
-
-            // کار کی باڈی (سرخ رنگ)
-            ctx.fillStyle = "#e74c3c";
-            ctx.fillRect(-car.width/2, -car.height - 5, car.width, car.height);
-            // چھت اور شیشہ
-            ctx.fillStyle = "#3498db";
-            ctx.fillRect(-12, -car.height - 18, 26, 13);
-
-            // بڑے اور مضبوط ٹائر
-            ctx.fillStyle = "#2c3e50";
-            ctx.beginPath();
-            ctx.arc(-18, 0, 11, 0, Math.PI * 2);
-            ctx.arc(18, 0, 11, 0, Math.PI * 2);
-            ctx.fill();
-            // ٹائر کے اندر کا رم
-            ctx.fillStyle = "#bdc3c7";
-            ctx.beginPath();
-            ctx.arc(-18, 0, 4, 0, Math.PI * 2);
-            ctx.arc(18, 0, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.restore();
-            ctx.restore();
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('game-over').style.display = 'block';
         }
 
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
+        function restartGame() {
+            location.reload();
         }
 
-        loop();
+        window.onload = init;
     </script>
 </body>
 </html>
