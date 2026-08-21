@@ -11,8 +11,7 @@
         h2 { color: #38bdf8; margin-bottom: 10px; }
         p { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
         input { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 15px; margin-bottom: 12px; outline: none; }
-        button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: #0284c7; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #0369a1; }
+        button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: #0284c7; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; }
         .dl-btn { display: inline-block; width: 100%; padding: 14px; background: #22c55e; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 15px; }
         .loader { display: none; margin: 15px auto; border: 3px solid #334155; border-top: 3px solid #38bdf8; border-radius: 50%; width: 30px; height: 30px; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -22,9 +21,9 @@
 
 <div class="card">
     <h2>TikTok Video Downloader</h2>
-    <p>کسی بھی طرح کا ٹک ٹاک لنک پیسٹ کریں اور واٹر مارک کے بغیر ڈاؤنلوڈ کریں</p>
+    <p>ٹک ٹاک کا کوئی بھی لنک پیسٹ کریں</p>
 
-    <input type="text" id="urlInput" placeholder="ٹک ٹاک لنک یہاں پیسٹ کریں...">
+    <input type="text" id="urlInput" placeholder="https://vt.tiktok.com/...">
     <button onclick="processTikTok()">ڈاؤنلوڈ کریں</button>
 
     <div class="loader" id="loader"></div>
@@ -37,56 +36,32 @@ async function processTikTok() {
     const loader = document.getElementById('loader');
     const result = document.getElementById('result');
 
-    if (!inputUrl) {
-        alert('براہ کرم لنک درج کریں!');
-        return;
-    }
+    if (!inputUrl) { alert('براہ کرم لنک درج کریں!'); return; }
 
     result.innerHTML = '';
     loader.style.display = 'block';
 
+    // CORS Proxy Bypass
+    const proxy = "https://api.allorigins.win/raw?url=";
+    const apiUrl = `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(inputUrl)}`;
+
     try {
-        // Direct TikTok API Engine (Handlesvt.tiktok short links natively)
-        let response = await fetch(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(inputUrl)}`);
+        let response = await fetch(proxy + encodeURIComponent(apiUrl));
         let data = await response.json();
 
-        if (data && data.video && data.video.noWatermark) {
-            loader.style.display = 'none';
-            result.innerHTML = `
-                <p style="color: #4ade80; margin-bottom: 5px;">ویڈیو تیار ہے!</p>
-                <a href="${data.video.noWatermark}" class="dl-btn" target="_blank" download>Download HD Video (No Watermark)</a>
-            `;
-            return;
-        }
-
-        // Fallback Engine via TikWM Direct POST
-        let formData = new FormData();
-        formData.append('url', inputUrl);
-        formData.append('count', 12);
-        formData.append('cursor', 0);
-        formData.append('web', 1);
-        formData.append('hd', 1);
-
-        let fallbackResponse = await fetch('https://www.tikwm.com/api/', {
-            method: 'POST',
-            body: formData
-        });
-
-        let fallbackData = await fallbackResponse.json();
         loader.style.display = 'none';
 
-        if (fallbackData && fallbackData.data && fallbackData.data.play) {
+        if (data && data.video && data.video.noWatermark) {
             result.innerHTML = `
                 <p style="color: #4ade80; margin-bottom: 5px;">ویڈیو تیار ہے!</p>
-                <a href="${fallbackData.data.play}" class="dl-btn" target="_blank" download>Download HD Video (No Watermark)</a>
+                <a href="${data.video.noWatermark}" class="dl-btn" target="_blank" download>Download Clean HD Video</a>
             `;
         } else {
-            result.innerHTML = '<p style="color: #f87171;">معذرت، لنک پروسیس نہیں ہو سکا۔ دوسرا لنک ٹرائی کریں۔</p>';
+            result.innerHTML = '<p style="color: #f87171;">معذرت، ویڈیو نہیں مل سکی۔ لنک چیک کریں۔</p>';
         }
-
     } catch (error) {
         loader.style.display = 'none';
-        result.innerHTML = '<p style="color: #f87171;">نیٹ ورک میں مسئلہ ہے۔ پیج کو ریفریش کر کے دوبارہ کوشش کریں۔</p>';
+        result.innerHTML = '<p style="color: #f87171;">پراکسی کنکشن میں مسئلہ ہے۔ دوبارہ کوشش کریں۔</p>';
     }
 }
 </script>
