@@ -45,48 +45,48 @@ async function processTikTok() {
     result.innerHTML = '';
     loader.style.display = 'block';
 
-    const apiKey = 'f6687ea3c6msh93374c9f6b03057p130d0jsn04932b1d5037';
-
     try {
-        // TikWM Primary Request
-        let response = await fetch(`https://tikwm.p.rapidapi.com/?url=${encodeURIComponent(inputUrl)}`, {
-            method: 'GET',
-            headers: {
-                'x-rapidapi-key': apiKey,
-                'x-rapidapi-host': 'tikwm.p.rapidapi.com'
-            }
-        });
-        
+        // Direct TikTok API Engine (Handlesvt.tiktok short links natively)
+        let response = await fetch(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(inputUrl)}`);
         let data = await response.json();
 
-        // اگر TikWM سے کامیابی ملے
-        if (data && data.data && data.data.play) {
+        if (data && data.video && data.video.noWatermark) {
             loader.style.display = 'none';
             result.innerHTML = `
                 <p style="color: #4ade80; margin-bottom: 5px;">ویڈیو تیار ہے!</p>
-                <a href="${data.data.play}" class="dl-btn" target="_blank" download>Download HD Video (No Watermark)</a>
+                <a href="${data.video.noWatermark}" class="dl-btn" target="_blank" download>Download HD Video (No Watermark)</a>
             `;
             return;
         }
 
-        // اگر شارٹ لنک کی وجہ سے بلاک ہوا تو Fallback API استعمال ہوگی
-        let fallbackResponse = await fetch(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(inputUrl)}`);
-        let fallbackData = await fallbackResponse.json();
+        // Fallback Engine via TikWM Direct POST
+        let formData = new FormData();
+        formData.append('url', inputUrl);
+        formData.append('count', 12);
+        formData.append('cursor', 0);
+        formData.append('web', 1);
+        formData.append('hd', 1);
 
+        let fallbackResponse = await fetch('https://www.tikwm.com/api/', {
+            method: 'POST',
+            body: formData
+        });
+
+        let fallbackData = await fallbackResponse.json();
         loader.style.display = 'none';
 
-        if (fallbackData && fallbackData.video && fallbackData.video.noWatermark) {
+        if (fallbackData && fallbackData.data && fallbackData.data.play) {
             result.innerHTML = `
                 <p style="color: #4ade80; margin-bottom: 5px;">ویڈیو تیار ہے!</p>
-                <a href="${fallbackData.video.noWatermark}" class="dl-btn" target="_blank" download>Download HD Video (No Watermark)</a>
+                <a href="${fallbackData.data.play}" class="dl-btn" target="_blank" download>Download HD Video (No Watermark)</a>
             `;
         } else {
-            result.innerHTML = '<p style="color: #f87171;">معذرت، ویڈیو کا لنک پروسیس نہیں ہو سکا۔ لنک درست کاپی کریں۔</p>';
+            result.innerHTML = '<p style="color: #f87171;">معذرت، لنک پروسیس نہیں ہو سکا۔ دوسرا لنک ٹرائی کریں۔</p>';
         }
 
     } catch (error) {
         loader.style.display = 'none';
-        result.innerHTML = '<p style="color: #f87171;">سرور کنکشن میں مسئلہ آیا، کچھ دیر بعد کوشش کریں۔</p>';
+        result.innerHTML = '<p style="color: #f87171;">نیٹ ورک میں مسئلہ ہے۔ پیج کو ریفریش کر کے دوبارہ کوشش کریں۔</p>';
     }
 }
 </script>
